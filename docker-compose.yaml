@@ -1,0 +1,7 @@
+# adicionar aqui em cima o BD postgre
+
+services:
+  web:
+    image: bitnamilegacy/moodle
+    ports:
+      - "8080"
