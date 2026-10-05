@@ -1,7 +1,30 @@
-# adicionar aqui em cima o BD postgre
-
+# se mudar algo nesse arquivo, é necessário recriar os containers com o comando: 
+# docker compose down -v && docker compose up -d
 services:
-  web:
+  bd:
+    image: bitnamilegacy/postgresql:13
+    environment:
+      - POSTGRESQL_USERNAME=user_moodle
+      - POSTGRESQL_PASSWORD=pw_moodle
+      - POSTGRESQL_DATABASE=pg_moodle
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_moodle -d pg_moodle"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  aplicacao_web:
     image: bitnamilegacy/moodle
+    depends_on:
+      bd:
+        condition: service_healthy
+    environment:
+      - BITNAMI_DEBUG=true
+      - MOODLE_DATABASE_TYPE=pgsql
+      - MOODLE_DATABASE_HOST=bd
+      - MOODLE_DATABASE_PORT_NUMBER=5432
+      - MOODLE_DATABASE_USER=user_moodle
+      - MOODLE_DATABASE_PASSWORD=pw_moodle
+      - MOODLE_DATABASE_NAME=pg_moodle
     ports:
-      - "8080"
+      - "8080:8080"
