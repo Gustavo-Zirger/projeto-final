@@ -2,11 +2,11 @@
 # docker compose down -v && docker compose up -d
 services:
   bd:
-    image: bitnamilegacy/postgresql:13
+    image: postgres:13
     environment:
-      - POSTGRESQL_USERNAME=user_moodle
-      - POSTGRESQL_PASSWORD=pw_moodle
-      - POSTGRESQL_DATABASE=pg_moodle
+      - POSTGRES_USER=user_moodle
+      - POSTGRES_PASSWORD=pw_moodle
+      - POSTGRES_DB=pg_moodle
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user_moodle -d pg_moodle"]
       interval: 5s
