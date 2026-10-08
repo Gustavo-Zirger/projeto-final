@@ -1,8 +1,10 @@
 # se mudar algo nesse arquivo, é necessário recriar os containers com o comando: 
 # docker compose down -v && docker compose up -d
+#adicionar volumes pra salvar os dados do banco e da aplicação
+# pra comunnicar as portas dei iptables-legacy -P FORWARD ACCEPT
 services:
   bd:
-    image: postgres:13
+    image: postgres:14
     networks:
       - moodle
     environment:
