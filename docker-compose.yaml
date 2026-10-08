@@ -18,6 +18,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    volumes:
+      - pg_data:/var/lib/postgresql/data
 
   aplicacao_web:
     image: bitnamilegacy/moodle
@@ -27,6 +29,7 @@ services:
       bd:
         condition: service_healthy
     environment:
+      - MOODLE_HOST=cautious-space-adventure-4j9wqjjrp4gwf95p-80.app.github.dev
       - BITNAMI_DEBUG=true
       - MOODLE_DATABASE_TYPE=pgsql
       - MOODLE_DATABASE_HOST=bd
@@ -35,8 +38,16 @@ services:
       - MOODLE_DATABASE_PASSWORD=pw_moodle
       - MOODLE_DATABASE_NAME=pg_moodle
     ports:
-      - "8080:8080"
+      - "80:8080"
+    volumes:
+      - moodle_config:/bitnami/moodle
+      - moodle_dados:/bitnami/moodledata
 
 networks:
   moodle:
     driver: bridge
+
+volumes:
+  pg_data:
+  moodle_config:
+  moodle_dados:
