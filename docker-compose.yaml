@@ -1,6 +1,6 @@
 # se mudar algo nesse arquivo, é necessário recriar os containers com o comando: 
 # docker compose down -v && docker compose up -d
-#adicionar volumes pra salvar os dados do banco e da aplicação
+# adicionar volumes pra salvar os dados do banco e da aplicação
 # pra comunnicar as portas dei iptables-legacy -P FORWARD ACCEPT
 services:
   bd:
@@ -20,6 +20,30 @@ services:
       retries: 5
     volumes:
       - pg_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    networks:
+      - moodle
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-reengagement}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-dev-only-change-me}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    networks:
+      - moodle
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
   aplicacao_web:
     image: bitnamilegacy/moodle
@@ -43,6 +67,60 @@ services:
       - moodle_config:/bitnami/moodle
       - moodle_dados:/bitnami/moodledata
 
+  acompanhamento:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["java", "-jar", "/app/app.jar", "tracker"]
+    networks:
+      - moodle
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      aplicacao_web:
+        condition: service_started
+    environment:
+      MOODLE_REST_URL: ${MOODLE_REST_URL:-http://aplicacao_web:8080/webservice/rest/server.php}
+      MOODLE_PUBLIC_URL: ${MOODLE_PUBLIC_URL:-http://localhost}
+      MOODLE_TOKEN: ${MOODLE_TOKEN:-}
+      MOODLE_COURSE_ID: ${MOODLE_COURSE_ID:-}
+      POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS:-3600}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-reengagement}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-dev-only-change-me}
+    restart: unless-stopped
+
+  notificacoes:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["java", "-jar", "/app/app.jar", "notifier"]
+    networks:
+      - moodle
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-reengagement}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-dev-only-change-me}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_FROM: ${SMTP_FROM:-lembretes@example.invalid}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      RETRY_DELAY_MS: ${RETRY_DELAY_MS:-30000}
+      MAX_RETRIES: ${MAX_RETRIES:-3}
+      SQLITE_PATH: /data/notifications.sqlite3
+    volumes:
+      - notification_data:/data
+    restart: unless-stopped
+
 networks:
   moodle:
     driver: bridge
@@ -51,3 +129,4 @@ volumes:
   pg_data:
   moodle_config:
   moodle_dados:
+  notification_data:
