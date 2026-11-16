@@ -1,7 +1,7 @@
 # se mudar algo nesse arquivo, é necessário recriar os containers com o comando: 
-# docker compose down -v && docker compose up -d
+# docker compose up -d --force-recreate (NUNCA use -v se quiser manter o Moodle configurado)
 # adicionar volumes pra salvar os dados do banco e da aplicação
-# pra comunnicar as portas dei iptables-legacy -P FORWARD ACCEPT
+# pra comunnicar as portas dei "sudo iptables-legacy -P FORWARD ACCEPT"
 services:
   bd:
     image: postgres:14
@@ -47,13 +47,16 @@ services:
 
   aplicacao_web:
     image: bitnamilegacy/moodle
+    hostname: moodle-web
     networks:
-      - moodle
+      moodle:
+        aliases:
+          - moodle-web
     depends_on:
       bd:
         condition: service_healthy
     environment:
-      - MOODLE_HOST=cautious-space-adventure-4j9wqjjrp4gwf95p-80.app.github.dev
+      - MOODLE_HOST=${MOODLE_HOST:-localhost:8080}
       - BITNAMI_DEBUG=true
       - MOODLE_DATABASE_TYPE=pgsql
       - MOODLE_DATABASE_HOST=bd
@@ -62,7 +65,7 @@ services:
       - MOODLE_DATABASE_PASSWORD=pw_moodle
       - MOODLE_DATABASE_NAME=pg_moodle
     ports:
-      - "80:8080"
+      - "8080:8080"
     volumes:
       - moodle_config:/bitnami/moodle
       - moodle_dados:/bitnami/moodledata
@@ -80,8 +83,8 @@ services:
       aplicacao_web:
         condition: service_started
     environment:
-      MOODLE_REST_URL: ${MOODLE_REST_URL:-http://aplicacao_web:8080/webservice/rest/server.php}
-      MOODLE_PUBLIC_URL: ${MOODLE_PUBLIC_URL:-http://localhost}
+      MOODLE_REST_URL: ${MOODLE_REST_URL:-http://moodle-web:8080/webservice/rest/server.php}
+      MOODLE_PUBLIC_URL: ${MOODLE_PUBLIC_URL:-http://localhost:8080}
       MOODLE_TOKEN: ${MOODLE_TOKEN:-}
       MOODLE_COURSE_ID: ${MOODLE_COURSE_ID:-}
       POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS:-3600}
